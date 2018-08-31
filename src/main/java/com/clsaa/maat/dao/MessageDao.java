@@ -15,6 +15,12 @@ import reactor.core.publisher.Mono;
  */
 public interface MessageDao extends ReactiveMongoRepository<Message, String> {
 
+    /**
+     * 根据id查询消息
+     *
+     * @param id 消息id
+     * @return {@link Mono<Message>}
+     */
     Mono<Message> findMessageById(String id);
 
 }
