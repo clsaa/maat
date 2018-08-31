@@ -1,0 +1,15 @@
+server:
+  port: 6543
+spring:
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  application:
+    name: maat
+  data:
+    mongodb:
+      uri: mongodb://122.152.214.50:27017/test
+spring.jackson.serialization.WRITE_DATES_AS_TIMESTAMPS: true  #返回JSON统一日期为时间戳
+spring.jackson.serialization.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS: false
