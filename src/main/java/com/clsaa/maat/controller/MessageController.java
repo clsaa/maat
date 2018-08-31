@@ -1,5 +1,9 @@
 package com.clsaa.maat.controller;
 
+import com.clsaa.maat.model.vo.MessageV1;
+import com.clsaa.maat.result.BizAssert;
+import com.clsaa.maat.service.MessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -16,18 +20,14 @@ import reactor.core.publisher.MonoSink;
 @CrossOrigin
 public class MessageController {
 
-    /**
-     * 根据id查询消息
-     *
-     * @param id 消息id
-     * @return 创建的APIid
-     * @summary 创建API
-     * @author 任贵杰 812022339@qq.com
-     * @since 2018-05-24
-     */
-    @PostMapping(value = "/v1/message/{id}")
-    public Mono<String> addApiV1(@PathVariable("id") String id) {
-        return Mono.create(MonoSink::success);
+    @Autowired
+    private MessageService messageService;
+
+
+    @GetMapping(value = "/v1/message/{messageId}")
+    public Mono<MessageV1> findMessageV1ById(@PathVariable("messageId") String messageId) {
+        BizAssert.allowed(false, 10001, "error !!!!");
+        return this.messageService.findMessageV1ById(messageId);
     }
 
 }
