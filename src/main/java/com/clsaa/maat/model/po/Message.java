@@ -7,6 +7,8 @@ import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.sql.Timestamp;
+
 /**
  * <p>
  * 消息持久层对象
@@ -21,8 +23,70 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 @Document(collection = "message")
 public class Message {
+
+    /**
+     * 实体id
+     */
     @Id
     private String id;
 
-    private String topic;
+    /**
+     * 版本号
+     */
+    private String version;
+
+    /**
+     * 消息id
+     */
+    private String messageId;
+
+    /**
+     * 消息内容
+     */
+    private String messageBody;
+
+    /**
+     * 消息重试次数
+     */
+    private Integer messageTryTimes;
+
+    /**
+     *  消息队列名
+     */
+    private String messageQueue;
+
+    /**
+     * 消息是否死亡
+     */
+    private Boolean messageDead;
+
+    /**
+     * 创建人
+     */
+    private String cuser;
+
+    /**
+     * 修改人
+     */
+    private String muser;
+
+    /**
+     * 创建时间
+     */
+    private Timestamp ctime;
+
+    /**
+     * 修改时间
+     */
+    private Timestamp mtime;
+
+    /**
+     * 消息状态
+     */
+    private String status;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

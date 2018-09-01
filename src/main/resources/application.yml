@@ -13,3 +13,13 @@ spring:
       uri: mongodb://122.152.214.50:27017/maat
 spring.jackson.serialization.WRITE_DATES_AS_TIMESTAMPS: true  #返回JSON统一日期为时间戳
 spring.jackson.serialization.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS: false
+
+maat:
+  mq:
+    name: RocketMQ                                #启用的MQ名称
+    RocketMQ:                                     #RocketMQ相关配置
+      namesrvAddr: 58.87.68.220:9876              #name-server地址与端口,多个可用分号隔开
+      groupName:  MAAT_TRASACTION_PRODUCER_GROUP  #生产者组名称
+      instanceName: MAAT_TRASACTION_INSTANCE      #要发送到的MQ集群
+      maxMessageSize: 131072 # 1024*128           #最大消息长度
+      sendMessageTimeout: 10000                   #消息发送超时时间

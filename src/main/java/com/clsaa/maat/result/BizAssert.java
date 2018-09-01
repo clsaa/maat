@@ -10,7 +10,7 @@ import com.clsaa.maat.result.exception.*;
  * {
  * "timestamp": 1524388994224,
  * "path": "/user/2",
- * "status": 500,
+ * "state": 500,
  * "code": -1,
  * "message": "/ by zero",
  * "error": "java.lang.ArithmeticException: / by zero"
@@ -28,7 +28,7 @@ public abstract class BizAssert {
     }
 
     /**
-     * 判定记录expression=true ,如果expression=false，则抛出 {@link NotFoundException} ，对应http status: 404
+     * 判定记录expression=true ,如果expression=false，则抛出 {@link NotFoundException} ，对应http state: 404
      *
      * @param expression 断言表达式
      * @param bizCode    业务码信息，不能为null
@@ -143,7 +143,7 @@ public abstract class BizAssert {
 
 
     /**
-     * 参数是否异常，如果false，则抛出 {@link InvalidParameterException}，对应 http status : 400
+     * 参数是否异常，如果false，则抛出 {@link InvalidParameterException}，对应 http state : 400
      *
      * @param expression 断言表达式
      * @param bizCode    业务码信息
@@ -343,7 +343,7 @@ public abstract class BizAssert {
     }
 
     /**
-     * 业务逻辑是否正常，如果 expression = false ,则直接抛出异常 {@link StandardBusinessException}，对应http status:417
+     * 业务逻辑是否正常，如果 expression = false ,则直接抛出异常 {@link StandardBusinessException}，对应http state:417
      *
      * @param expression 断言表达式
      * @param bizCode    业务码信息

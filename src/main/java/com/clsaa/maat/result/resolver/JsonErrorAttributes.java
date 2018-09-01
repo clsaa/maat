@@ -55,7 +55,7 @@ public class JsonErrorAttributes implements ErrorAttributes {
         errorAttributes.put("path", request.path());
         Throwable error = getError(request);
         HttpStatus errorStatus = determineHttpStatus(error);
-        errorAttributes.put("status", errorStatus.value());
+        errorAttributes.put("state", errorStatus.value());
         errorAttributes.put("code", determineCode(error));
         errorAttributes.put("message", determineMessage(error));
         errorAttributes.put("error", error.toString());

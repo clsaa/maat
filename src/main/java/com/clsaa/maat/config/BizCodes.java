@@ -23,5 +23,8 @@ public interface BizCodes {
      * 数据库更新失败
      */
     BizCode ERROR_UPDATE = new BizCode(1012, "更新失败");
-
+    /**
+     * 订单状态转变非法
+     */
+    BizCode INVALID_MESSAGE_STATUS_CHANGING = new BizCode(1100, "消息状态转变非法");
 }
