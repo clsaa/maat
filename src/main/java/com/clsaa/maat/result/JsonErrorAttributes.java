@@ -1,6 +1,5 @@
-package com.clsaa.maat.result.resolver;
+package com.clsaa.maat.result;
 
-import com.clsaa.maat.result.RestResult;
 import com.clsaa.maat.result.exception.AbstractResultException;
 import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
@@ -21,7 +20,7 @@ import java.util.Map;
  * 修改error默认返回字段内容，覆盖 {@link DefaultErrorAttributes}
  *
  * @author 任贵杰
- * @since 2018-09-01
+ * @since 2018-04-22
  */
 public class JsonErrorAttributes implements ErrorAttributes {
 
@@ -55,7 +54,7 @@ public class JsonErrorAttributes implements ErrorAttributes {
         errorAttributes.put("path", request.path());
         Throwable error = getError(request);
         HttpStatus errorStatus = determineHttpStatus(error);
-        errorAttributes.put("state", errorStatus.value());
+        errorAttributes.put("status", errorStatus.value());
         errorAttributes.put("code", determineCode(error));
         errorAttributes.put("message", determineMessage(error));
         errorAttributes.put("error", error.toString());

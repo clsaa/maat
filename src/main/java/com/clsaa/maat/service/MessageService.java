@@ -1,13 +1,17 @@
 package com.clsaa.maat.service;
 
+import com.clsaa.maat.config.BizCodes;
 import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.dao.MessageDao;
 import com.clsaa.maat.model.po.Message;
 import com.clsaa.maat.model.vo.MessageV1;
+import com.clsaa.maat.result.BizAssert;
+import com.clsaa.maat.result.exception.InvalidParameterException;
 import com.clsaa.maat.utils.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 
 import java.time.LocalDateTime;
 
@@ -49,10 +53,9 @@ public class MessageService {
         message.setCuser(Message.DEFAULT_CUSER);
         message.setMuser(Message.DEFAULT_MUSER);
         message.setStatus(MessageState.待确认.getStateCode());
-        return this.messageDao.save(message).onErrorMap(e -> {
-            e.printStackTrace();
-            return e;
-        });
+        return this.messageDao
+                .save(message)
+                .onErrorMap(e -> new InvalidParameterException(BizCodes.ERROR_INSERT.getCode(), "添加失败"));
     }
 
 

@@ -1,4 +1,4 @@
-package com.clsaa.maat.result.resolver;
+package com.clsaa.maat.result;
 
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -21,8 +21,8 @@ import org.springframework.web.reactive.config.WebFluxConfigurer;
  * {@link EnableAutoConfiguration Auto-configuration} to render errors via a WebFlux
  * {@link org.springframework.web.server.WebExceptionHandler}.
  *
- * @author 任贵杰 812022339@qq.com
- * @since 2018-09-01
+ * @author 任贵杰
+ * @since 2.0.0
  */
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)

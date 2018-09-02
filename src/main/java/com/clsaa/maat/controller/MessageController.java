@@ -3,6 +3,7 @@ package com.clsaa.maat.controller;
 import com.clsaa.maat.model.dto.MessageDtoV1;
 import com.clsaa.maat.model.po.Message;
 import com.clsaa.maat.model.vo.MessageV1;
+import com.clsaa.maat.result.BizAssert;
 import com.clsaa.maat.service.MessageService;
 import com.clsaa.maat.validator.dto.MessageDtoV1Validator;
 import org.springframework.beans.factory.annotation.Autowired;
