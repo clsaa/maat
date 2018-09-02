@@ -7,7 +7,10 @@ import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.io.Serializable;
+import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 /**
  * <p>
@@ -22,8 +25,13 @@ import java.sql.Timestamp;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "message")
-public class Message {
+public class Message implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
+    public static final String DEFAULT_CUSER = "SYSTEM-MAAT";
+    public static final String DEFAULT_MUSER = "SYSTEM-MAAT";
+    public static final Integer DEFAULT_TRY_TIMES = 0;
     /**
      * 实体id
      */
@@ -51,9 +59,14 @@ public class Message {
     private Integer messageTryTimes;
 
     /**
-     *  消息队列名
+     * 消息队列名
      */
     private String messageQueue;
+
+    /**
+     * queryURL, 由主动方应用提供, 用于消息状态确认调用
+     */
+    private String queryURL;
 
     /**
      * 消息是否死亡
@@ -73,12 +86,12 @@ public class Message {
     /**
      * 创建时间
      */
-    private Timestamp ctime;
+    private LocalDateTime ctime;
 
     /**
      * 修改时间
      */
-    private Timestamp mtime;
+    private LocalDateTime mtime;
 
     /**
      * 消息状态

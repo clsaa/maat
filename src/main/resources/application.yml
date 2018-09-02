@@ -11,8 +11,10 @@ spring:
   data:
     mongodb:
       uri: mongodb://122.152.214.50:27017/maat
-spring.jackson.serialization.WRITE_DATES_AS_TIMESTAMPS: true  #返回JSON统一日期为时间戳
-spring.jackson.serialization.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS: false
+
+#spring.jackson.serialization.WRITE_DATE_KEYS_AS_TIMESTAMPS: true  #返回JSON统一日期为时间戳
+#spring.jackson.serialization.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS: false
+#spring.jackson.time-zone: GMT+8
 
 maat:
   mq:
