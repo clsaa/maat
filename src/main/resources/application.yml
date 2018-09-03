@@ -17,7 +17,7 @@ spring:
 #spring.jackson.time-zone: GMT+8
 
 maat:
-  retry: 10,20,30,40,50,60                        #每隔10s,20s,30s,40s,50s,60s重新发送一次
+  retryWaitSeconds: 10,20,30,40,50,60             #每隔10s,20s,30s,40s,50s,60s重新发送一次
   mq:
     name: RocketMQ                                #启用的MQ名称
     RocketMQ:                                     #RocketMQ相关配置
