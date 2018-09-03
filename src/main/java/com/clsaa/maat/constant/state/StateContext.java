@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
  */
 public class StateContext {
 
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private static final Logger LOGGER = LoggerFactory.getLogger(StateContext.class);
 
   /**
    * 判断消息状态是否满足切换条件
@@ -21,7 +21,7 @@ public class StateContext {
    * @param stateTo   消息目标状态
    * @return 是否可以切换
    */
-  public boolean validateState(String stateFrom, String stateTo) {
+  public static boolean validateState(String stateFrom, String stateTo) {
     AbstractState state = getStateClass(stateFrom);
     MessageState eStateTo = MessageState.getByCode(stateTo);
     return state.validateState(eStateTo);
@@ -34,14 +34,14 @@ public class StateContext {
    * @param stateFrom 消息原状态
    * @return ? extends {@link AbstractState}
    */
-  private AbstractState getStateClass(String stateFrom) {
+  private static AbstractState getStateClass(String stateFrom) {
     MessageState eStateFrom = MessageState.getByCode(stateFrom);
     Class<? extends AbstractState> clz = eStateFrom.getMappingStateClass();
     AbstractState localState = null;
     try {
       localState = clz.newInstance();
     } catch (InstantiationException | IllegalAccessException e) {
-      logger.error("{}初始化失败", clz.getName());
+      LOGGER.error("{}初始化失败", clz.getName());
     }
     return localState;
   }

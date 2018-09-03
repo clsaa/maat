@@ -17,11 +17,18 @@ import reactor.core.publisher.Mono;
 public interface MessageDao extends ReactiveCrudRepository<Message, String> {
 
     /**
-     * 根据id查询消息
+     * 根据messageId删除消息
      *
-     * @param id 消息id
+     * @param messageId 消息id
+     * @return {@link Mono<Void>}
+     */
+    Mono<Void> deleteByMessageId(String messageId);
+
+    /**
+     * 根据messageId查询消息
+     *
+     * @param messageId 消息id
      * @return {@link Mono<Message>}
      */
-    Mono<Message> findMessageById(String id);
-
+    Mono<Message> findMessageByMessageId(String messageId);
 }
