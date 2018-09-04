@@ -2,6 +2,7 @@ package com.clsaa.maat.mq.rocketmq;
 
 import com.clsaa.maat.mq.MessageSender;
 import com.clsaa.maat.mq.MessageQueueException;
+import com.clsaa.maat.service.MessageService;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
@@ -10,6 +11,7 @@ import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
 
@@ -26,6 +28,9 @@ import java.io.UnsupportedEncodingException;
  * @since 2018/9/1
  */
 public class RocketMQMessageSender implements MessageSender {
+
+    @Autowired
+    private MessageService messageService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RocketMQMessageSender.class);
 

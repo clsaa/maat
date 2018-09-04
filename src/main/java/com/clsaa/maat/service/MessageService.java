@@ -1,15 +1,20 @@
 package com.clsaa.maat.service;
 
 import com.clsaa.maat.config.BizCodes;
+import com.clsaa.maat.config.MaatProperties;
 import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.constant.state.StateContext;
 import com.clsaa.maat.dao.MessageDao;
 import com.clsaa.maat.model.po.Message;
 import com.clsaa.maat.model.vo.MessageV1;
+import com.clsaa.maat.mq.MessageQueueException;
+import com.clsaa.maat.mq.MessageSender;
+import com.clsaa.maat.mq.retry.MessageRetryQueue;
 import com.clsaa.maat.result.BizAssert;
-import com.clsaa.maat.result.exception.InvalidParameterException;
 import com.clsaa.maat.result.exception.StandardBusinessException;
 import com.clsaa.maat.utils.BeanUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -20,8 +25,16 @@ import java.time.LocalDateTime;
 @Service
 public class MessageService {
 
+    public static final Logger LOGGER = LoggerFactory.getLogger(MessageService.class);
+
     @Autowired
     private MessageDao messageDao;
+
+    @Autowired
+    private MaatProperties maatProperties;
+
+    @Autowired
+    private MessageSender messageSender;
 
     /**
      * <p>
@@ -102,6 +115,22 @@ public class MessageService {
 
     /**
      * <p>
+     * 更新消息
+     * </p>
+     *
+     * @param message 消息持久层对象
+     * @return {@link Mono<MessageV1>}
+     * @summary 更新消息
+     * @author 任贵杰 812022339@qq.com
+     * @since 2018-09-03
+     */
+    public Mono<MessageV1> updateMessage(Message message) {
+        return this.messageDao.save(message)
+                .map(m -> BeanUtils.convertType(m, MessageV1.class));
+    }
+
+    /**
+     * <p>
      * 根据消息id将消息状态更新为已取消
      * </p>
      *
@@ -165,6 +194,44 @@ public class MessageService {
     }
 
     /**
+     * 发送消息
+     *
+     * @param messageId 消息id
+     */
+    public void sendMessage(String messageId) {
+        this.messageDao.findMessageByMessageId(messageId).map(msg -> {
+            if (msg.getStatus().equals(MessageState.发送中.getStateCode())) {
+                //没死亡则判断重发次数,如果重发次数等于配置的最大重发次数则设置状态为已死亡,不再重发此消息
+                //retryWaitSeconds: 10,20,30,40,50,60 即每隔10s,20s,30s,40s,50s重新发送一次,最后一次发送60s后标记为已死亡, 连上第一次共发送六次
+                //如果前面已经发送了6次,最后一次发送60s后,取出消息MessageTryTimes=6 >= RetryWaitSeconds.size则标记为死亡状态,不再发送消息
+                if (msg.getMessageTryTimes() >= this.maatProperties.getRetryWaitSeconds().size()) {
+                    msg.setStatus(MessageState.死亡.getStateCode());
+                    msg.setMtime(LocalDateTime.now());
+                    msg.setMuser(Message.DEFAULT_MUSER);
+                    return this.messageDao.save(msg);
+                } else {
+                    //发送消息
+                    try {
+                        this.messageSender.send(msg.getMessageQueue(), msg.getMessageId(), msg.getMessageBody());
+                    } catch (MessageQueueException e) {
+                        LOGGER.error("消息发送失败:", msg.toString());
+                    }
+                    //将消息发送次数加一并保存
+                    msg.setMessageTryTimes(msg.getMessageTryTimes() + 1);
+                    msg.setMtime(LocalDateTime.now());
+                    msg.setMuser(Message.DEFAULT_MUSER);
+                    this.messageDao.save(msg);
+                    //将消息放到重试队列
+                    MessageRetryQueue.getInsance().put(msg.getMessageId(),
+                            msg.getMessageTryTimes() == 0 ? System.currentTimeMillis() : System.currentTimeMillis() +
+                                    this.maatProperties.getRetryWaitSeconds().get(msg.getMessageTryTimes() - 1));
+                }
+            }
+            return msg;
+        });
+    }
+
+    /**
      * <p>
      * 根据消息id查询消息
      * </p>
@@ -179,6 +246,5 @@ public class MessageService {
         return this.messageDao.findMessageByMessageId(messageId)
                 .map(m -> BeanUtils.convertType(m, MessageV1.class));
     }
-
 
 }
