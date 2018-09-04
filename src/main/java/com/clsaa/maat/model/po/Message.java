@@ -9,8 +9,6 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.io.Serializable;
-import java.sql.Date;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 /**

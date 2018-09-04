@@ -9,7 +9,6 @@ import com.clsaa.maat.service.MessageService;
 import com.clsaa.maat.validator.dto.MessageDtoV1Validator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
-import org.springframework.validation.Validator;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;

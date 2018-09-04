@@ -17,8 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 
 
@@ -35,6 +37,28 @@ public class MessageService {
 
     @Autowired
     private MessageSender messageSender;
+
+    /**
+     * 初始化重试队列
+     */
+    @PostConstruct
+    private void initMessageRetryQueue() {
+        this.findMessageV1ByStatus(MessageState.发送中.getStateCode())
+                .collectList()
+                .block()
+                .parallelStream()
+                .peek(msg -> {
+                    //将消息放到重试队列
+                    MessageRetryQueue.getInsance().put(msg.getMessageId(),
+                            msg.getMessageTryTimes() == 0 ? System.currentTimeMillis() : System.currentTimeMillis() +
+                                    this.maatProperties.getRetryWaitSeconds().get(msg.getMessageTryTimes() - 1));
+                });
+    }
+
+    private Flux<MessageV1> findMessageV1ByStatus(String status) {
+        return this.messageDao.findAllByStatus(status)
+                .map(msg -> BeanUtils.convertType(msg, MessageV1.class));
+    }
 
     /**
      * <p>

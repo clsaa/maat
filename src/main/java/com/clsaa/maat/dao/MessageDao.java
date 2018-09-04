@@ -2,8 +2,8 @@ package com.clsaa.maat.dao;
 
 
 import com.clsaa.maat.model.po.Message;
-import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -31,4 +31,11 @@ public interface MessageDao extends ReactiveCrudRepository<Message, String> {
      * @return {@link Mono<Message>}
      */
     Mono<Message> findMessageByMessageId(String messageId);
+
+    /**
+     * 根据消息状态查询全部消息
+     * @param status 消息状态
+     * @return {@link Flux<Message>}
+     */
+    Flux<Message> findAllByStatus(String status);
 }
