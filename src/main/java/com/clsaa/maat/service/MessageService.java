@@ -49,12 +49,33 @@ public class MessageService {
                 .parallelStream()
                 .peek(msg -> {
                     //将消息放到重试队列
-                    MessageRetryQueue.getInsance().put(msg.getMessageId(),
-                            msg.getMessageTryTimes() == 0 ? System.currentTimeMillis() : System.currentTimeMillis() +
-                                    this.maatProperties.getRetryWaitSeconds().get(msg.getMessageTryTimes() - 1));
+                    this.putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
                 });
     }
 
+    /**
+     * <p>
+     * 将消息置入消息重试队列中,会根据当前重试次数确定消息出队时间
+     * </p>
+     *
+     * @param messageId 消息id(唯一标识业务)
+     * @summary 将消息置入消息重试队列中
+     * @author 任贵杰 812022339@qq.com
+     * @since 2018-09-05
+     */
+    private void putMessageToMessageRetryQueue(String messageId, int currentTryTimes) {
+        //将消息放到重试队列
+        MessageRetryQueue.getInsance().put(messageId,
+                currentTryTimes == 0 ? System.currentTimeMillis() : System.currentTimeMillis() +
+                        this.maatProperties.getRetryWaitSeconds().get(currentTryTimes - 1));
+    }
+
+    /**
+     * 根据消息状态查询全部消息
+     *
+     * @param status 消息状态
+     * @return {@link Flux<MessageV1>}
+     */
     private Flux<MessageV1> findMessageV1ByStatus(String status) {
         return this.messageDao.findAllByStatus(status)
                 .map(msg -> BeanUtils.convertType(msg, MessageV1.class));
@@ -139,22 +160,6 @@ public class MessageService {
 
     /**
      * <p>
-     * 更新消息
-     * </p>
-     *
-     * @param message 消息持久层对象
-     * @return {@link Mono<MessageV1>}
-     * @summary 更新消息
-     * @author 任贵杰 812022339@qq.com
-     * @since 2018-09-03
-     */
-    public Mono<MessageV1> updateMessage(Message message) {
-        return this.messageDao.save(message)
-                .map(m -> BeanUtils.convertType(m, MessageV1.class));
-    }
-
-    /**
-     * <p>
      * 根据消息id将消息状态更新为已取消
      * </p>
      *
@@ -166,7 +171,11 @@ public class MessageService {
      */
     public Mono<MessageV1> updateStatusToCanceledByMessageId(String messageId) {
         return this.updateStatusByMessageId(messageId, MessageState.已取消.getStateCode())
-                .map(m -> BeanUtils.convertType(m, MessageV1.class));
+                .map(m -> {
+                    //将已取消的消息从重试队列移除
+                    MessageRetryQueue.getInsance().remove(messageId);
+                    return BeanUtils.convertType(m, MessageV1.class);
+                });
     }
 
     /**
@@ -182,7 +191,11 @@ public class MessageService {
      */
     public Mono<MessageV1> updateStatusToSendingByMessageId(String messageId) {
         return this.updateStatusByMessageId(messageId, MessageState.发送中.getStateCode())
-                .map(m -> BeanUtils.convertType(m, MessageV1.class));
+                .map(m -> {
+                    //将消息放到重试队列
+                    this.putMessageToMessageRetryQueue(m.getMessageId(), m.getMessageTryTimes());
+                    return BeanUtils.convertType(m, MessageV1.class);
+                });
     }
 
     /**
@@ -198,23 +211,11 @@ public class MessageService {
      */
     public Mono<MessageV1> updateStatusToFinishedByMessageId(String messageId) {
         return this.updateStatusByMessageId(messageId, MessageState.已完成.getStateCode())
-                .map(m -> BeanUtils.convertType(m, MessageV1.class));
-    }
-
-    /**
-     * <p>
-     * 根据消息id将消息状态更新为已死亡
-     * </p>
-     *
-     * @param messageId 消息id(唯一标识业务)
-     * @return {@link Mono<MessageV1>}
-     * @summary 更新消息状态为已死亡
-     * @author 任贵杰 812022339@qq.com
-     * @since 2018-09-03
-     */
-    public Mono<MessageV1> updateStatusToDeadByMessageId(String messageId) {
-        return this.updateStatusByMessageId(messageId, MessageState.死亡.getStateCode())
-                .map(m -> BeanUtils.convertType(m, MessageV1.class));
+                .map(m -> {
+                    //将消息从重试队列移除
+                    MessageRetryQueue.getInsance().remove(m.getMessageId());
+                    return BeanUtils.convertType(m, MessageV1.class);
+                });
     }
 
     /**
@@ -246,9 +247,7 @@ public class MessageService {
                     msg.setMuser(Message.DEFAULT_MUSER);
                     this.messageDao.save(msg);
                     //将消息放到重试队列
-                    MessageRetryQueue.getInsance().put(msg.getMessageId(),
-                            msg.getMessageTryTimes() == 0 ? System.currentTimeMillis() : System.currentTimeMillis() +
-                                    this.maatProperties.getRetryWaitSeconds().get(msg.getMessageTryTimes() - 1));
+                    this.putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
                 }
             }
             return msg;
