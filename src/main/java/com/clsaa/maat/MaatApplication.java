@@ -2,6 +2,8 @@ package com.clsaa.maat;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * <p>
@@ -13,6 +15,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 2018-08-31
  */
 @SpringBootApplication
+@EnableScheduling
+@EnableAsync
 public class MaatApplication {
     public static void main(String[] args) {
         SpringApplication.run(MaatApplication.class, args);

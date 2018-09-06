@@ -5,6 +5,7 @@ import com.clsaa.maat.config.MaatProperties;
 import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.constant.state.StateContext;
 import com.clsaa.maat.dao.MessageDao;
+import com.clsaa.maat.model.dto.BusinessStatusDtoV1;
 import com.clsaa.maat.model.po.Message;
 import com.clsaa.maat.model.vo.MessageV1;
 import com.clsaa.maat.mq.MessageQueueException;
@@ -13,6 +14,7 @@ import com.clsaa.maat.mq.retry.MessageRetryQueue;
 import com.clsaa.maat.result.BizAssert;
 import com.clsaa.maat.result.exception.StandardBusinessException;
 import com.clsaa.maat.utils.BeanUtils;
+import com.clsaa.maat.utils.HttpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +78,7 @@ public class MessageService {
      * @param status 消息状态
      * @return {@link Flux<MessageV1>}
      */
-    private Flux<MessageV1> findMessageV1ByStatus(String status) {
+    public Flux<MessageV1> findMessageV1ByStatus(String status) {
         return this.messageDao.findAllByStatus(status)
                 .map(msg -> BeanUtils.convertType(msg, MessageV1.class));
     }
@@ -164,7 +166,7 @@ public class MessageService {
 
     /**
      * <p>
-     * 根据消息id将消息状态更新为发送中
+     * 根据消息id将消息状态更新为发送中,会将消息加入到重试队列中
      * </p>
      *
      * @param messageId 消息id(唯一标识业务)
@@ -184,7 +186,7 @@ public class MessageService {
 
     /**
      * <p>
-     * 根据消息id将消息状态更新为已完成
+     * 根据消息id将消息状态更新为已完成,会从重试队列移除消息
      * </p>
      *
      * @param messageId 消息id(唯一标识业务)
@@ -203,9 +205,28 @@ public class MessageService {
     }
 
     /**
-     * 发送消息
+     * <p>
+     * 根据消息id查询消息
+     * </p>
      *
-     * @param messageId 消息id
+     * @param messageId 消息id(唯一标识业务)
+     * @return {@link Mono<MessageV1>}
+     * @summary 根据消息id查询消息
+     * @author 任贵杰 812022339@qq.com
+     * @since 2018-09-03
+     */
+    public Mono<MessageV1> findMessageV1ByMessageId(String messageId) {
+        return this.messageDao.findMessageByMessageId(messageId)
+                .map(m -> BeanUtils.convertType(m, MessageV1.class));
+    }
+
+    /**
+     * 发送消息,并处理消息状态,
+     * 如果消息不存在会静默处理,
+     * 如果消息已经达到最大重试次数则会标记为死亡不再发送消息,
+     * 如果消息未达到最大重试次数则会发送消息并将消息置入重试队列中
+     *
+     * @param messageId 消息id(唯一标识业务)
      */
     public void sendMessage(String messageId) {
         this.messageDao.findMessageByMessageId(messageId).map(msg -> {
@@ -242,19 +263,14 @@ public class MessageService {
         });
     }
 
+
     /**
-     * <p>
-     * 根据消息id查询消息
-     * </p>
+     * 调用业务方提供的回查URL,确定业务当前状态
      *
-     * @param messageId 消息id(唯一标识业务)
-     * @return {@link Mono<MessageV1>}
-     * @summary 根据消息id查询消息
-     * @author 任贵杰 812022339@qq.com
-     * @since 2018-09-03
+     * @param queryURL 业务方提供的回查URL
+     * @return {@link BusinessStatusDtoV1}
      */
-    public Mono<MessageV1> findMessageV1ByMessageId(String messageId) {
-        return this.messageDao.findMessageByMessageId(messageId)
-                .map(m -> BeanUtils.convertType(m, MessageV1.class));
+    public BusinessStatusDtoV1 confirmMessageStatus(String queryURL) {
+        return HttpUtil.get(queryURL, BusinessStatusDtoV1.class);
     }
 }
