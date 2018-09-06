@@ -118,22 +118,6 @@ public class MessageService {
     }
 
     /**
-     * <p>
-     * 根据实体id删除消息
-     * </p>
-     *
-     * @param id 实体id
-     * @return {@link Mono<Void>}
-     * @summary 根据实体id删除消息
-     * @author 任贵杰 812022339@qq.com
-     * @since 2018/9/3
-     */
-    public Mono<Void> deleteMessageById(String id) {
-        return this.messageDao.deleteById(id)
-                .onErrorMap(e -> new StandardBusinessException(BizCodes.ERROR_DELETE.getCode(), "删除失败"));
-    }
-
-    /**
      * @param messageId 消息id
      * @param statusTo  目标状态
      * @return {@link Mono<Void>}
@@ -225,6 +209,10 @@ public class MessageService {
      */
     public void sendMessage(String messageId) {
         this.messageDao.findMessageByMessageId(messageId).map(msg -> {
+            //如果消息已被删除则静默处理
+            if (msg == null) {
+                return null;
+            }
             if (msg.getStatus().equals(MessageState.发送中.getStateCode())) {
                 //没死亡则判断重发次数,如果重发次数等于配置的最大重发次数则设置状态为已死亡,不再重发此消息
                 //retryWaitSeconds: 10,20,30,40,50,60 即每隔10s,20s,30s,40s,50s重新发送一次,最后一次发送60s后标记为已死亡, 连上第一次共发送六次
@@ -269,5 +257,4 @@ public class MessageService {
         return this.messageDao.findMessageByMessageId(messageId)
                 .map(m -> BeanUtils.convertType(m, MessageV1.class));
     }
-
 }

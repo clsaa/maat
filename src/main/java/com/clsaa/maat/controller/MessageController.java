@@ -38,7 +38,7 @@ public class MessageController {
 
     /**
      * <p>
-     * 添加消息,用于消息预存储,在主动方业务执行前盗用
+     * 添加消息,用于消息预存储,在主动方业务执行前调用
      * </p>
      *
      * @param messageDtoV1 {@link MessageDtoV1}
@@ -56,24 +56,6 @@ public class MessageController {
                 messageDtoV1.getMessageQueue(),
                 messageDtoV1.getQueryURL(),
                 messageDtoV1.getRemark());
-    }
-
-    /**
-     * <p>
-     * 根据实体id删除消息
-     * </p>
-     *
-     * @param id 实体id
-     * @return {@link Mono<Void>}
-     * @summary 根据实体id删除消息
-     * @author 任贵杰 812022339@qq.com
-     * @since 2018-09-03
-     */
-    @DeleteMapping(value = "/v1/message/{id}")
-    public Mono<Void> deleteMessageByIdV1(@PathVariable("id") String id) {
-        BizAssert.validParam(StringUtils.hasText(id),
-                BizCodes.INVALID_PARAM.getCode(), "参数id非法");
-        return this.messageService.deleteMessageById(id);
     }
 
     /**
