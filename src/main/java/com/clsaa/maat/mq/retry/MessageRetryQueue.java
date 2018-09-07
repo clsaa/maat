@@ -1,7 +1,5 @@
 package com.clsaa.maat.mq.retry;
 
-import com.clsaa.maat.model.po.Message;
-import com.clsaa.maat.mq.MessageQueueException;
 import com.clsaa.maat.mq.MessageSender;
 import com.clsaa.maat.service.MessageService;
 import org.slf4j.Logger;
@@ -9,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.PostConstruct;
+import javax.validation.constraints.NotNull;
 import java.util.concurrent.*;
 
 /**
@@ -24,8 +23,6 @@ public class MessageRetryQueue {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageRetryQueue.class);
 
     private static final MessageRetryQueue MESSAGE_RETRY_QUEUE = new MessageRetryQueue();
-    @Autowired
-    private MessageSender messageSender;
     @Autowired
     private MessageService messageService;
 
@@ -47,7 +44,7 @@ public class MessageRetryQueue {
     /**
      * 处理消息的线程池
      */
-    Executor executor = new ThreadPoolExecutor(1, 1, 120L, TimeUnit.SECONDS, new SynchronousQueue<>());
+    private Executor executor = new ThreadPoolExecutor(1, 1, 120L, TimeUnit.SECONDS, new SynchronousQueue<>());
 
     /**
      * 创建一个最初为空的新延时队列
@@ -104,9 +101,9 @@ public class MessageRetryQueue {
      *
      * @param messageId 消息id(唯一标识业务)
      */
-    public boolean remove(String messageId) {
+    public void remove(String messageId) {
         LOGGER.info("从重试队列删除, messageId:[{}]", messageId);
-        return this.messageRetryItemDelayQueue.remove(new MessageRetryItem(messageId));
+        this.messageRetryItemDelayQueue.remove(new MessageRetryItem(messageId));
     }
 
 }

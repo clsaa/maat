@@ -18,21 +18,26 @@ import com.clsaa.maat.utils.HttpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 
 
 @Service
 public class MessageService {
 
-    public static final Logger LOGGER = LoggerFactory.getLogger(MessageService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageService.class);
 
-    @Autowired
-    private MessageDao messageDao;
+    private final MessageDao messageDao;
 
     @Autowired
     private MaatProperties maatProperties;
@@ -40,19 +45,28 @@ public class MessageService {
     @Autowired
     private MessageSender messageSender;
 
+    public MessageService(MessageDao messageDao) {
+        this.messageDao = messageDao;
+    }
+
     /**
      * 初始化重试队列
      */
-    @PostConstruct
-    private void initMessageRetryQueue() {
-        this.findMessageV1ByStatus(MessageState.发送中.getStateCode())
-                .collectList()
-                .block()
-                .parallelStream()
-                .peek(msg -> {
-                    //将消息放到重试队列
-                    this.putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
-                });
+    @Component
+    class MessageRetryQueueInitBinder implements ApplicationRunner {
+        @Override
+        public void run(ApplicationArguments args) {
+            LOGGER.info("message retry queue init begin");
+            long count = findMessageV1ByStatus(MessageState.发送中.getStateCode())
+                    .collectList()
+                    .block()
+                    .parallelStream()
+                    .peek(msg -> {
+                        //将消息放到重试队列
+                        putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
+                    }).count();
+            LOGGER.info("message retry queue init finished, size:[{}]", count);
+        }
     }
 
     /**
@@ -137,7 +151,7 @@ public class MessageService {
                     //判断当前状态是否能改为目标状态
                     BizAssert.allowed(StateContext.validateState(existMessage.getStatus(), statusTo),
                             String.format("当前状态编码为%s,不能修改为%s", existMessage.getStatus(), statusTo));
-                    existMessage.setStatus(MessageState.已取消.getStateCode());
+                    existMessage.setStatus(statusTo);
                     existMessage.setMuser(Message.DEFAULT_MUSER);
                     existMessage.setMtime(LocalDateTime.now());
                     return this.messageDao.save(existMessage);

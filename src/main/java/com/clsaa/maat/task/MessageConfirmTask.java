@@ -2,18 +2,22 @@ package com.clsaa.maat.task;
 
 import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.model.dto.BusinessStatusDtoV1;
+import com.clsaa.maat.model.vo.MessageV1;
 import com.clsaa.maat.service.MessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import reactor.core.scheduler.Schedulers;
+
+import java.util.List;
 
 
 @Component
 public class MessageConfirmTask {
 
-    public static final Logger LOGGER = LoggerFactory.getLogger(MessageConfirmTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageConfirmTask.class);
 
     @Autowired
     private MessageService messageService;
@@ -25,6 +29,9 @@ public class MessageConfirmTask {
     void confirmMessageStatus() {
         LOGGER.info("message confirm task begin");
         long count = this.messageService.findMessageV1ByStatus(MessageState.待确认.getStateCode())
+                .collectList()
+                .block()
+                .parallelStream()
                 .map(msg -> {
                     BusinessStatusDtoV1 businessStatusDtoV1;
                     try {
@@ -40,7 +47,7 @@ public class MessageConfirmTask {
                     switch (businessStatusDtoV1.getBusinessStatus()) {
                         //如果业务已完成则消息转为发送中状态,修改状态时会将消息加入到重试队列中
                         case BusinessStatusDtoV1.STATUS_FINISHED:
-                            this.messageService.updateStatusToSendingByMessageId(msg.getMessageId());
+                            this.messageService.updateStatusToSendingByMessageId(msg.getMessageId()).block();
                             LOGGER.info("message confirm SENDING STATUS, messageId: [{}]", msg.getMessageId());
                             break;
                         //如果业务失败则消息转为已取消状态,修改状态时会将消息从重试队列移除
@@ -56,7 +63,40 @@ public class MessageConfirmTask {
                             break;
                     }
                     return msg;
-                }).count().block();
+                }).count();
+//        long count = this.messageService.findMessageV1ByStatus(MessageState.待确认.getStateCode())
+//                .map(msg -> {
+//                    BusinessStatusDtoV1 businessStatusDtoV1;
+//                    try {
+//                        businessStatusDtoV1 = this.messageService.confirmMessageStatus(msg.getQueryURL());
+//                    } catch (Exception e) {
+//                        LOGGER.error("message confirm query return error data type, messageId: [{}]", msg.getMessageId());
+//                        return msg;
+//                    }
+//                    if (businessStatusDtoV1 == null) {
+//                        LOGGER.error("message confirm query return null, messageId: [{}]", msg.getMessageId());
+//                        return msg;
+//                    }
+//                    switch (businessStatusDtoV1.getBusinessStatus()) {
+//                        //如果业务已完成则消息转为发送中状态,修改状态时会将消息加入到重试队列中
+//                        case BusinessStatusDtoV1.STATUS_FINISHED:
+//                            this.messageService.updateStatusToSendingByMessageId(msg.getMessageId());
+//                            LOGGER.info("message confirm SENDING STATUS, messageId: [{}]", msg.getMessageId());
+//                            break;
+//                        //如果业务失败则消息转为已取消状态,修改状态时会将消息从重试队列移除
+//                        case BusinessStatusDtoV1.STATUS_FAILED:
+//                            this.messageService.updateStatusToCanceledByMessageId(msg.getMessageId());
+//                            LOGGER.info("message confirm CANCELED STATUS, messageId: [{}]", msg.getMessageId());
+//                            break;
+//                        case BusinessStatusDtoV1.STATUS_DOING:
+//                            LOGGER.info("message confirm DOING STATUS, messageId: [{}]", msg.getMessageId());
+//                            break;
+//                        default:
+//                            LOGGER.error("message confirm ERROR STATUS, messageId: [{}]", msg.getMessageId());
+//                            break;
+//                    }
+//                    return msg;
+//                }).count().block();
         LOGGER.info("message confirm task finished, size : [{}]", count);
     }
 }
