@@ -24,9 +24,15 @@ public class MessageConfirmTask {
     @Scheduled(cron = "0 0/1 * * * *")
     void confirmMessageStatus() {
         LOGGER.info("message confirm task begin");
-        this.messageService.findMessageV1ByStatus(MessageState.待确认.getStateCode())
+        long count = this.messageService.findMessageV1ByStatus(MessageState.待确认.getStateCode())
                 .map(msg -> {
-                    BusinessStatusDtoV1 businessStatusDtoV1 = this.messageService.confirmMessageStatus(msg.getQueryURL());
+                    BusinessStatusDtoV1 businessStatusDtoV1;
+                    try {
+                        businessStatusDtoV1 = this.messageService.confirmMessageStatus(msg.getQueryURL());
+                    } catch (Exception e) {
+                        LOGGER.error("message confirm query return error data type, messageId: [{}]", msg.getMessageId());
+                        return msg;
+                    }
                     if (businessStatusDtoV1 == null) {
                         LOGGER.error("message confirm query return null, messageId: [{}]", msg.getMessageId());
                         return msg;
@@ -50,12 +56,7 @@ public class MessageConfirmTask {
                             break;
                     }
                     return msg;
-                })
-                .collectList()
-                .map(messages -> {
-                    LOGGER.info("message confirm task finished, size : [{}]", messages.size());
-                    return messages;
-                });
-
+                }).count().block();
+        LOGGER.info("message confirm task finished, size : [{}]", count);
     }
 }
