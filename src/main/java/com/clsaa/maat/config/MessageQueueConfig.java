@@ -16,7 +16,7 @@ import javax.validation.constraints.NotBlank;
  */
 @SpringBootConfiguration
 public class MessageQueueConfig {
-    public static final Logger LOGGER = LoggerFactory.getLogger(MessageQueueConfig.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageQueueConfig.class);
 
     @NotBlank
     @Value("${maat.mq.name}")

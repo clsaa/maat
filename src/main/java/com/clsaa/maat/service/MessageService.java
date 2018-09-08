@@ -24,12 +24,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
-import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
+import java.util.Date;
 
 
 @Service
@@ -50,26 +47,6 @@ public class MessageService {
     }
 
     /**
-     * 初始化重试队列
-     */
-    @Component
-    class MessageRetryQueueInitBinder implements ApplicationRunner {
-        @Override
-        public void run(ApplicationArguments args) {
-            LOGGER.info("message retry queue init begin");
-            long count = findMessageV1ByStatus(MessageState.发送中.getStateCode())
-                    .collectList()
-                    .block()
-                    .parallelStream()
-                    .peek(msg -> {
-                        //将消息放到重试队列
-                        putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
-                    }).count();
-            LOGGER.info("message retry queue init finished, size:[{}]", count);
-        }
-    }
-
-    /**
      * <p>
      * 将消息置入消息重试队列中,会根据当前重试次数确定消息出队时间
      * </p>
@@ -79,11 +56,11 @@ public class MessageService {
      * @author 任贵杰 812022339@qq.com
      * @since 2018-09-05
      */
-    private void putMessageToMessageRetryQueue(String messageId, int currentTryTimes) {
+    public void putMessageToMessageRetryQueue(String messageId, int currentTryTimes) {
         //将消息放到重试队列
-        MessageRetryQueue.getInsance().put(messageId,
+        MessageRetryQueue.getInstance().put(messageId,
                 currentTryTimes == 0 ? System.currentTimeMillis() : System.currentTimeMillis() +
-                        this.maatProperties.getRetryWaitSeconds().get(currentTryTimes - 1));
+                        this.maatProperties.getRetryWaitSeconds().get(currentTryTimes - 1) * 1000);
     }
 
     /**
@@ -173,7 +150,7 @@ public class MessageService {
         return this.updateStatusByMessageId(messageId, MessageState.已取消.getStateCode())
                 .map(m -> {
                     //将已取消的消息从重试队列移除
-                    MessageRetryQueue.getInsance().remove(messageId);
+                    MessageRetryQueue.getInstance().remove(messageId);
                     return BeanUtils.convertType(m, MessageV1.class);
                 });
     }
@@ -213,7 +190,7 @@ public class MessageService {
         return this.updateStatusByMessageId(messageId, MessageState.已完成.getStateCode())
                 .map(m -> {
                     //将消息从重试队列移除
-                    MessageRetryQueue.getInsance().remove(m.getMessageId());
+                    MessageRetryQueue.getInstance().remove(m.getMessageId());
                     return BeanUtils.convertType(m, MessageV1.class);
                 });
     }
@@ -243,38 +220,38 @@ public class MessageService {
      * @param messageId 消息id(唯一标识业务)
      */
     public void sendMessage(String messageId) {
-        this.messageDao.findMessageByMessageId(messageId).map(msg -> {
-            //如果消息已被删除则静默处理
-            if (msg == null) {
-                return null;
-            }
-            if (msg.getStatus().equals(MessageState.发送中.getStateCode())) {
-                //没死亡则判断重发次数,如果重发次数等于配置的最大重发次数则设置状态为已死亡,不再重发此消息
-                //retryWaitSeconds: 10,20,30,40,50,60 即每隔10s,20s,30s,40s,50s重新发送一次,最后一次发送60s后标记为已死亡, 连上第一次共发送六次
-                //如果前面已经发送了6次,最后一次发送60s后,取出消息MessageTryTimes=6 >= RetryWaitSeconds.size则标记为死亡状态,不再发送消息
-                if (msg.getMessageTryTimes() >= this.maatProperties.getRetryWaitSeconds().size()) {
-                    msg.setStatus(MessageState.死亡.getStateCode());
-                    msg.setMtime(LocalDateTime.now());
-                    msg.setMuser(Message.DEFAULT_MUSER);
-                    return this.messageDao.save(msg);
-                } else {
-                    //发送消息
-                    try {
-                        this.messageSender.send(msg.getMessageQueue(), msg.getMessageId(), msg.getMessageBody());
-                    } catch (MessageQueueException e) {
-                        LOGGER.error("消息发送失败:", msg.toString());
-                    }
-                    //将消息发送次数加一并保存
-                    msg.setMessageTryTimes(msg.getMessageTryTimes() + 1);
-                    msg.setMtime(LocalDateTime.now());
-                    msg.setMuser(Message.DEFAULT_MUSER);
-                    this.messageDao.save(msg);
-                    //将消息放到重试队列
-                    this.putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
+        Message msg = this.messageDao.findMessageByMessageId(messageId).block();
+        //如果消息已被删除则静默处理
+        if (msg == null) {
+            return;
+        }
+        if (msg.getStatus().equals(MessageState.发送中.getStateCode())) {
+            //没死亡则判断重发次数,如果重发次数等于配置的最大重发次数则设置状态为已死亡,不再重发此消息
+            //retryWaitSeconds: 10,20,30,40,50,60 即每隔10s,20s,30s,40s,50s重新发送一次,最后一次发送60s后标记为已死亡, 连上第一次共发送六次
+            //如果前面已经发送了6次,最后一次发送60s后,取出消息MessageTryTimes=6 >= RetryWaitSeconds.size则标记为死亡状态,不再发送消息
+            if (msg.getMessageTryTimes() >= this.maatProperties.getRetryWaitSeconds().size()) {
+                LOGGER.info("消息已死亡, messageId:[{}]", messageId);
+                msg.setMessageDead(true);
+                msg.setStatus(MessageState.死亡.getStateCode());
+                msg.setMtime(LocalDateTime.now());
+                msg.setMuser(Message.DEFAULT_MUSER);
+                this.messageDao.save(msg).block();
+            } else {
+                //发送消息
+                try {
+                    this.messageSender.send(msg.getMessageQueue(), msg.getMessageId(), msg.getMessageBody());
+                } catch (MessageQueueException e) {
+                    LOGGER.error("消息发送失败:", msg.toString());
                 }
+                //将消息发送次数加一并保存
+                msg.setMessageTryTimes(msg.getMessageTryTimes() + 1);
+                msg.setMtime(LocalDateTime.now());
+                msg.setMuser(Message.DEFAULT_MUSER);
+                this.messageDao.save(msg).block();
+                //将消息放到重试队列
+                this.putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
             }
-            return msg;
-        });
+        }
     }
 
 

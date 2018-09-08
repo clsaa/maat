@@ -1,7 +1,5 @@
 package com.clsaa.maat.mq.retry;
 
-import com.clsaa.maat.model.po.Message;
-import com.google.common.base.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,7 +23,7 @@ public class MessageRetryItem implements Delayed {
      */
     private long expiredTime;
 
-    public MessageRetryItem(String messageId) {
+    MessageRetryItem(String messageId) {
         this.messageId = messageId;
     }
 
@@ -36,7 +34,7 @@ public class MessageRetryItem implements Delayed {
      */
     @Override
     public long getDelay(@NotNull TimeUnit unit) {
-        return this.expiredTime - System.currentTimeMillis();
+        return unit.convert(this.expiredTime - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
 
     /**

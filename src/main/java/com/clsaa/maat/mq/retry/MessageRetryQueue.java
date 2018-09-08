@@ -1,13 +1,15 @@
 package com.clsaa.maat.mq.retry;
 
-import com.clsaa.maat.mq.MessageSender;
+import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.service.MessageService;
+import com.clsaa.maat.utils.Services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-import javax.validation.constraints.NotNull;
 import java.util.concurrent.*;
 
 /**
@@ -18,13 +20,26 @@ import java.util.concurrent.*;
  * @author 任贵杰 812022339@qq.com
  * @since 2018-09-04
  */
+@Component
 public class MessageRetryQueue {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageRetryQueue.class);
 
     private static final MessageRetryQueue MESSAGE_RETRY_QUEUE = new MessageRetryQueue();
+
     @Autowired
     private MessageService messageService;
+
+    /**
+     * 处理消息的线程池
+     */
+    private Executor executor = new ThreadPoolExecutor(2, 4, 120L, TimeUnit.SECONDS, new SynchronousQueue<>());
+
+    /**
+     * 创建一个最初为空的新延时队列
+     */
+    private DelayQueue<MessageRetryItem> messageRetryItemDelayQueue = new DelayQueue<>();
+
 
     /**
      * 防止被其他地方初始化
@@ -37,36 +52,41 @@ public class MessageRetryQueue {
      *
      * @return {@link MessageRetryQueue}
      */
-    public static MessageRetryQueue getInsance() {
+    public static MessageRetryQueue getInstance() {
         return MESSAGE_RETRY_QUEUE;
     }
 
     /**
-     * 处理消息的线程池
+     * 取元素守护线程
      */
-    private Executor executor = new ThreadPoolExecutor(1, 1, 120L, TimeUnit.SECONDS, new SynchronousQueue<>());
+    Thread daemonThread;
 
     /**
-     * 创建一个最初为空的新延时队列
+     * 初始化重试队列
      */
-    private DelayQueue<MessageRetryItem> messageRetryItemDelayQueue = new DelayQueue<>();
+    @Component
+    public class Builder implements ApplicationRunner {
 
-    /**
-     * 监控消息队列的守护线程
-     */
-    private Thread daemonThread;
-
-    /**
-     * 初始化守护线程
-     */
-    @PostConstruct
-    public void initDaemonThread() {
-        LOGGER.info("开始初始化消息重试队列守护线程...");
-        this.daemonThread = new Thread(this::execute);
-        this.daemonThread.setDaemon(true);
-        this.daemonThread.setName("Order Cancel Daemon Thread");
-        this.daemonThread.start();
-        LOGGER.info("消息重试队列守护线程初始化完成...");
+        @Override
+        public void run(ApplicationArguments args) {
+            LOGGER.info("message retry queue init begin");
+            long count = messageService.findMessageV1ByStatus(MessageState.发送中.getStateCode())
+                    .collectList()
+                    .block()
+                    .parallelStream()
+                    .peek(msg -> {
+                        //将消息放到重试队列
+                        messageService.putMessageToMessageRetryQueue(msg.getMessageId(), msg.getMessageTryTimes());
+                    }).count();
+            LOGGER.info("message retry queue init finished, size:[{}]", count);
+            LOGGER.info("开始初始化消息重试队列守护线程...");
+            daemonThread = new Thread(() -> MessageRetryQueue.getInstance().execute());
+//            daemonThread = new Thread(MessageRetryQueue.this::execute); 无法正常执行, 不知道为什么, 待研究
+            daemonThread.setDaemon(true);
+            daemonThread.setName("MessageRetryQueueDaemonThread");
+            daemonThread.start();
+            LOGGER.info("消息重试队列守护线程初始化完成...");
+        }
     }
 
     private void execute() {
@@ -77,10 +97,12 @@ public class MessageRetryQueue {
                 messageRetryItem = this.messageRetryItemDelayQueue.take();
                 final String messageId = messageRetryItem.getMessageId();
                 LOGGER.info("从重试队列取出消息, messageId:[{}]", messageId);
-                this.executor.execute(() -> this.messageService.sendMessage(messageId));
+                executor.execute(() -> Services.of(MessageService.class).sendMessage(messageId));
+//                Services.of(MessageService.class).sendMessage(messageId);  // 方便在守护线程里打断点测试
             } catch (Exception e) {
                 LOGGER.error("从重试队列取出消息失败, messageId:[{}], error: [{}]",
                         messageRetryItem.getMessageId(), e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -105,5 +127,4 @@ public class MessageRetryQueue {
         LOGGER.info("从重试队列删除, messageId:[{}]", messageId);
         this.messageRetryItemDelayQueue.remove(new MessageRetryItem(messageId));
     }
-
 }
