@@ -2,17 +2,12 @@ package com.clsaa.maat.task;
 
 import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.model.dto.BusinessStatusDtoV1;
-import com.clsaa.maat.model.vo.MessageV1;
 import com.clsaa.maat.service.MessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import reactor.core.scheduler.Schedulers;
-
-import java.util.List;
-
 
 @Component
 public class MessageConfirmTask {

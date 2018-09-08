@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -48,7 +47,7 @@ public final class RestResultProviders {
      *
      * @author 任贵杰
      */
-    public static void add(RestResultProvider provider) {
+    private static void add(RestResultProvider provider) {
         if (provider == null) {
             return;
         }
