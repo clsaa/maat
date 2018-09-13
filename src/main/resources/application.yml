@@ -10,7 +10,7 @@ spring:
     name: maat-server
   data:
     mongodb:
-      uri: mongodb://mongodb.clsaa.com:27017/maat
+      uri: mongodb://122.152.214.50:27017/maat
 
 #spring.jackson.serialization.WRITE_DATE_KEYS_AS_TIMESTAMPS: true  #返回JSON统一日期为时间戳
 #spring.jackson.serialization.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS: false
