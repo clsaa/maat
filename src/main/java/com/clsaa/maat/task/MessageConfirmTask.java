@@ -2,12 +2,15 @@ package com.clsaa.maat.task;
 
 import com.clsaa.maat.constant.state.MessageState;
 import com.clsaa.maat.model.dto.BusinessStatusDtoV1;
+import com.clsaa.maat.model.vo.MessageV1;
 import com.clsaa.maat.service.MessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class MessageConfirmTask {
@@ -47,7 +50,7 @@ public class MessageConfirmTask {
                             break;
                         //如果业务失败则消息转为已取消状态,修改状态时会将消息从重试队列移除
                         case BusinessStatusDtoV1.STATUS_FAILED:
-                            this.messageService.updateStatusToCanceledByMessageId(msg.getMessageId());
+                            this.messageService.updateStatusToCanceledByMessageId(msg.getMessageId()).block();
                             LOGGER.info("message confirm CANCELED STATUS, messageId: [{}]", msg.getMessageId());
                             break;
                         case BusinessStatusDtoV1.STATUS_DOING:
