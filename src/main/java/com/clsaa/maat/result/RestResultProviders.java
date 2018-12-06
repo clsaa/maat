@@ -28,17 +28,13 @@ public final class RestResultProviders {
         // 自动加载业务码解析器
         ServiceLoader<RestResultProvider> providerLoader =
                 ServiceLoader.load(RestResultProvider.class);
-        for (RestResultProvider aProviderLoader : providerLoader) {
-            add(aProviderLoader);
-        }
-        // 当前路径业务码解码器
-        try {
-            List<Class<?>> restResultProviders = getAllAssignedClass(RestResultProvider.class);
-            for (Class<?> restResultProvider : restResultProviders) {
-                add((RestResultProvider) restResultProvider.newInstance());
+        if (providerLoader != null) {
+            Iterator<RestResultProvider> providerIterator = providerLoader.iterator();
+            if (providerIterator != null) {
+                while (providerIterator.hasNext()) {
+                    add(providerIterator.next());
+                }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 

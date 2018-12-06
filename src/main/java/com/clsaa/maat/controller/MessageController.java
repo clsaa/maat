@@ -35,6 +35,14 @@ public class MessageController {
     public void initMessageDtoV1ValidatorBinder(WebDataBinder webDataBinder) {
         webDataBinder.setValidator(this.messageDtoV1Validator);
     }
+    @GetMapping("/test1")
+    public void test(){
+        BizAssert.allowed(false, 123);
+    }
+    @GetMapping("/test2")
+    public void test2(){
+        BizAssert.allowed(false, BizCodes.INVALID_PARAM);
+    }
 
     /**
      * <p>
